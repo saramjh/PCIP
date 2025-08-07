@@ -1,369 +1,280 @@
-## 🔥 PCIP Framework 완전 해부: 제작 배경부터 설계 의도까지
-### 제목: SOTA AI 코딩 어시스턴트 개답답해서 오은영 박사 육아법으로 만든 시스템 완전 해부.txt
-**3줄 요약**
-- SOTA모델 AI 코딩 지원 툴들은 사용자의 지시가 불명확할 때, 개발 맥락 무시하고 부분적인 코드 작성이나 중복, 구조 외 코딩, 문법 등 개찐빠 존나 냄.
-- PCIP Framework는 지시 이행 과정에서 프로젝트 아키텍처와 도메인 맥락을 파악하고, 적절한 전문가(부모)를 선택해 최적의 코드 구현을 유도함.
-- 이를 통해 사용자의 추상적인 요청도 안정적이고 일관된 코딩 결과로 연결하며, 외부 지식(RAG 또는 mcp; 툴이 지원을 해야 적용)과 실시간으로 연동해 품질을 보장. 사용법은 맨 마지막에.
----
+# PCIP Framework
 
-## **🚨 Part 1: 내가 왜 이걸 만들게 됐는지 스토리타임**
+**Parent-Child Instruction Processing Framework for AI Coding Assistants**
 
-### **실제 겪은 참사**
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)]()
 
-**캐싱 시스템 멘붕 사건**
-- 나: "성능 최적화해줘, 느려 죽겠어"
-- Claude: *Redis 캐싱 코드 뚝딱*
-- 나: "와 진짜 빨라졌네! 대박!"
-- **1주 후:** 사용자들 "프로필 수정해도 옛날 정보만 나와요" 문의 폭증
-- **원인:** 캐시 무효화 로직이 아예 없었음
-- **결과:** 유저들한테 사과문 올리고, 캐시 전체 초기화 ㅂㄷㅂㄷ
+## Overview
 
----
+PCIP (Parent-Child Instruction Processing) Framework는 AI 코딩 어시스턴트의 컨텍스트 이해와 코드 품질을 향상시키는 3계층 아키텍처 시스템입니다.
 
-**그때 깨달은 것: "얘들은 코드는 잘 짜는데 '맥락'을 잊네 ㅂㄷㅂㄷ"**
+### Key Features
 
-### **내가 해줘야 했던 노가다**
-
-```
-나: "결제 기능 만들어줘"
-AI: "네! 기본 결제 폼 만들어드릴게요!"
-
-나: "잠깐잠깐... 보안 고려해야 하고..."
-나: "PCI DSS 규정도 맞춰야 하고..."  
-나: "환불 처리도 있어야 하고..."
-나: "실패 시 롤백도 생각해야 하고..."
-나: "사기 방지도 고려해야 하고..."
-나: "로깅도 해야 하고..."
-나: "모니터링도 해야 하고..."
-나: "에러 핸들링도..."
-
-AI: "아 그럼 처음부터 다시 만들게요 ^^;"
-
-나: "ㅅㅂ..."
-```
-
-**매.번.이.런.식.으.로 ㅂㄷㅂㄷㅂㄷ**
+- **3-Layer Architecture**: PM(Meta) → Expert(Parent) → Child(Execution)
+- **Dynamic Expert Selection**: 프로젝트 요구사항에 따른 실시간 전문가 배정
+- **Risk-Based Execution**: 5단계 위험도 평가 시스템
+- **External Knowledge Integration**: RAG/MCP 도구를 통한 최신 정보 활용
+- **Context-Aware Processing**: 프로젝트 아키텍처와 도메인 맥락 자동 파악
 
 ---
 
-## **🧠 Part 2: 오은영 박사 프로그램에서 얻은 번뜩이는 영감**
+## Problem Statement
 
-**그러던 어느 날, 회사에서 야근하면서 유튜브 틀어놨는데 오은영 박사 프로그램이 나옴**
+### Context Awareness Issues in Current AI Coding Assistants
 
-### **TV에서 본 충격적인 장면**
+현재 AI 코딩 어시스턴트들의 주요 문제점:
 
-**상황:**
-- 엄마: "선생님, 우리 아이가 게임만 해요. 하루 종일 게임게임게임..."
-- 엄마: "그만하라고 해도 안 들어요. 어떻게 해야 하나요?"
+#### 1. Context Ignorance
+- 프로젝트의 전체 아키텍처를 고려하지 않은 코드 생성
+- 도메인별 요구사항(보안, 성능, 규정준수 등) 간과
+- 기존 코드베이스와의 일관성 부족
 
-**일반적인 엄마들의 반응:**
-- "게임 그만해!" (명령)
-- "게임기 압수!" (강제)
-- "게임하면 용돈 없어!" (협박)
-
-**오은영 박사의 접근법:**
-- "아이한테 그냥 '게임 그만해' 하시면 안돼요"
-- "먼저 아이가 왜 게임을 하는지 파악해야 해요"
-- "게임을 통해 어떤 필요를 채우려고 하는 건지 이해하세요"
-- "그 다음에 대안을 제시하고, 장기적 관점에서 가이드를 해주세요"
-
-**그 순간 내 머리속:**
+#### 2. Incomplete Implementation
 ```
-아... 이거네!
-
-AI한테도 똑같잖아?
-- 그냥 "코딩해" (X)
-- 상황 파악하고, 맥락 이해하고, 가이드 해주고 (O)
-
-AI한테도 '좋은 부모' 역할이 필요한거 아닌가?
+User Request: "Build payment system"
+Typical AI Response: Basic payment form without:
+- Security considerations (PCI DSS compliance)
+- Error handling and rollback mechanisms
+- Fraud prevention
+- Audit logging
+- Refund processing
 ```
 
-### **오은영 박사님이 제시한 좋은 부모의 조건들**
-
-1. **상황 파악:** "아이가 왜 이런 행동을 하는지 먼저 이해"
-2. **위험 평가:** "이렇게 하면 어떤 결과가 나올지 미리 생각"  
-3. **맥락 고려:** "우리 가정의 상황, 아이의 성격, 장기적 목표 종합 고려"
-4. **가이드 제공:** "단순 명령이 아닌, 이유와 함께 방향 제시"
-5. **지속 관찰:** "결과를 보고 지속적으로 조정"
-
-**이걸 AI 코딩에 적용하면?**
-1. **상황 파악:** "이 요청이 어떤 종류고 얼마나 복잡한가?"
-2. **위험 평가:** "이 작업의 리스크는 어느 정도인가?"
-3. **맥락 고려:** "이 프로젝트의 특성, 기술 스택, 사용자층 고려"
-4. **가이드 제공:** "어떤 전문가가 어떤 관점으로 접근해야 하는가?"
-5. **지속 관찰:** "결과물이 기준에 맞는지 검증"
+#### 3. Iterative Correction Overhead
+- 초기 구현 → 문제 발견 → 수정 요청 → 재구현 사이클 반복
+- 개발자가 모든 세부사항을 명시적으로 지시해야 하는 부담
 
 ---
 
-## **💡 Part 3: 그래서 설계한 PCIP 시스템**
+## Solution Architecture
 
-### **기존 방식의 한계**
+### Inspiration from Structured Guidance Principles
+
+PCIP Framework는 구조화된 지도 원칙에서 영감을 얻어 설계되었습니다:
+
+1. **상황 파악 (Situation Analysis)**: 요청의 복잡도와 특성 분석
+2. **위험 평가 (Risk Assessment)**: 작업의 잠재적 리스크 평가  
+3. **맥락 고려 (Context Consideration)**: 프로젝트 특성, 기술 스택, 사용자층 고려
+4. **가이드 제공 (Guidance Provision)**: 적절한 전문가 관점에서 방향 제시
+5. **지속 관찰 (Continuous Monitoring)**: 결과물의 품질 기준 검증
+
+---
+
+### 3-Layer Architecture Overview
+
+#### Traditional Approach
 ```
-사용자 → AI → 결과물
-"결제 기능 만들어줘" → "네!" → 대충 만든 위험한 코드
+User Request → AI → Code Output
+"Build payment system" → Direct implementation → Potentially unsafe code
 ```
 
-### **PCIP 방식**
+#### PCIP Approach  
 ```
-사용자 → PM(상황판단) → Expert(전문가 멘토링) → Child(정확한 실행)
-"결제 기능 만들어줘" → "위험도 높음, 결제 전문가 + 보안 전문가 투입" → "PCI 규정 고려해서 이렇게 만들어" → 안전하고 완성도 높은 코드
+User Request → PM(Analysis) → Expert(Guidance) → Child(Execution)
+"Build payment system" → Risk assessment → Payment + Security experts → Compliant, secure code
+```
+
+### Layer Specifications
+
+#### Meta Layer: Project Manager (PM)
+- **Role**: Conversational analysis and expert selection
+- **Responsibilities**:
+  - Risk level assessment (5-level system)
+  - Dynamic expert team composition
+  - External resource coordination
+  - Project context management
+
+#### Parent Layer: Domain Expert
+- **Role**: Specialized guidance and quality standards
+- **Expert Types**:
+  - Security Engineer
+  - Performance Engineer  
+  - UX Designer
+  - Payment Systems Expert
+  - DevOps Engineer
+  - Mobile Specialist
+
+#### Child Layer: Execution Engine
+- **Role**: Precise implementation following expert guidance
+- **Capabilities**:
+  - Syntactic correctness verification
+  - Best practices application
+  - Integration with existing codebase
+
+---
+
+## Risk Assessment System
+
+### 5-Level Risk Classification
+
+| Level | Risk     | Criteria                    | Examples                                  | Execution Mode |
+| ----- | -------- | --------------------------- | ----------------------------------------- | -------------- |
+| 5     | Very Low | Single file, minimal impact | CSS styling, console logs                 | Silent         |
+| 4     | Low      | 2-3 files, single domain    | Component updates, simple validation      | Silent         |
+| 3     | Moderate | Multi-file or cross-domain  | New features, API changes                 | Conditional    |
+| 2     | High     | Major system changes        | Database schema, payment integration      | Explicit       |
+| 1     | Critical | System-wide overhaul        | Architecture migration, framework changes | Explicit       |
+
+### Execution Modes
+
+#### Silent Mode (Levels 5, 4)
+- Immediate execution with minimal user interaction
+- Brief implementation summary provided
+- Optimized for development speed
+
+#### Explicit Mode (Levels 1, 2, complex Level 3)  
+- Detailed analysis and implementation plan presentation
+- User approval required before execution
+- Comprehensive documentation of changes
+
+## Configuration
+
+### Dynamic Expert Selection
+
+**Conversational Cue-Based Expert Assignment:**
+
+| Keywords                          | Selected Experts                           |
+| --------------------------------- | ------------------------------------------ |
+| "로그인", "보안", "해킹 방지"     | Security Engineer + Backend Architect      |
+| "느려", "최적화", "속도"          | Performance Engineer + Domain Expert       |
+| "사용하기 어려워", "디자인", "UI" | UX Designer + Frontend Specialist          |
+| "결제", "쇼핑", "상거래"          | Payment Systems Expert + Security Engineer |
+| "모바일", "반응형", "앱"          | Mobile Specialist + UX Designer            |
+
+### External Knowledge Integration
+
+**3-Level Confidence System:**
+- **High Confidence**: Internal knowledge sufficient → Direct response
+- **Medium Confidence**: Cross-reference external sources → Verified response  
+- **Low Confidence**: "Consulting specialized resources" → Accurate information
+
+**Supported External Sources:**
+- Technical documentation and API references
+- Industry standards and compliance requirements
+- Real-time library versions and security advisories
+- Framework-specific best practices
+
+### Quality Assurance
+
+**Triple Verification System:**
+1. **Child Layer**: Syntactic correctness and basic functionality
+2. **Parent Layer**: Domain-specific quality standards
+3. **PM Layer**: Overall project consistency and architecture alignment
+
+---
+
+## Performance Comparison
+
+### Development Process
+
+| Phase            | Traditional AI          | PCIP Framework                            |
+| ---------------- | ----------------------- | ----------------------------------------- |
+| Initial Request  | Quick implementation    | Analysis & Planning                       |
+| Result Quality   | Partial/Incomplete      | Complete & Context-aware                  |
+| Iteration Cycles | Multiple fixes required | Minimal revisions needed                  |
+| Overall Time     | 1-hour task → 1 week    | Slightly slower start → Faster completion |
+
+### Benefits
+
+✅ **Reduced Explanation Overhead**: Context-aware processing eliminates repetitive instructions  
+✅ **Expert Perspective**: Domain expertise automatically applied  
+✅ **Higher Code Quality**: Multi-layer verification ensures robust output  
+✅ **Fewer Post-Implementation Issues**: Proactive consideration of edge cases  
+✅ **Project Consistency**: Maintained architectural coherence  
+
+### Limitations
+
+❌ **Initial Complexity**: Longer setup time for simple tasks (mitigated by Silent Mode)  
+❌ **Learning Curve**: Requires understanding of risk assessment system  
+❌ **AI Constraints**: Still subject to inherent AI limitations  
+
+---
+
+## Installation & Setup
+
+### Prerequisites
+- AI coding assistant that supports system prompts (Claude, ChatGPT, etc.)
+- Development environment (Cursor, VS Code, etc.)
+
+### Quick Start
+
+1. **Download the System Prompt**
+   ```
+   Copy the contents of SystemPrompt.md
+   ```
+
+2. **Configure Your AI Assistant**
+   - **Cursor**: Add to User Rules or Project Rules
+   - **ChatGPT**: Set as Custom Instructions
+   - **Claude**: Use as System Prompt
+
+3. **Start Coding**
+   ```
+   User: "Build a user authentication system"
+   PCIP: [PM analyzes] → [Security Expert assigned] → [Implementation]
+   ```
+
+## Usage Examples
+
+### Example 1: Simple Task (Silent Mode)
+```
+User: "Change button color to red"
+PCIP: [CSS update applied immediately]
+Note: Low risk styling change completed
+```
+
+### Example 2: Complex Task (Explicit Mode)  
+```
+User: "Build payment processing system"
+PCIP: 
+- Risk Level: Critical (Level 1)
+- Experts Assigned: Payment Systems + Security + Backend
+- Analysis: PCI DSS compliance required...
+- Proceed with implementation? Y/n
+```
+
+### Example 3: Multi-Expert Coordination
+```
+User: "Create mobile e-commerce app with secure payments"
+PCIP: 
+- PM: High complexity detected
+- Experts: Mobile Specialist + UX Designer + Payment Expert + Security Engineer
+- Approach: Progressive Web App with tokenized payments...
+```
+
+## Configuration Options
+
+### Risk Level Customization
+Adjust risk thresholds in the system prompt based on your project needs:
+- Conservative: Lower thresholds for Explicit Mode
+- Aggressive: Higher thresholds for Silent Mode
+
+### Expert Selection Override
+Manually specify expert preferences:
+```
+User: "Build login system (focus on UX)"
+PCIP: UX Designer + Backend Architect assigned
 ```
 
 ---
 
-## **🏗️ Part 4: 각 파트별 설계 의도 상세 분석**
+## Contributing
 
-### **4-1. 3-Layer 구조가 3층인 이유**
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request with detailed description
 
-**왜 3층으로 나눴나?**
+## License
 
-**시행착오:**
-- **1층 (기존)**: 사용자 → AI → 결과물 = 맥락 무시, 품질 개판
-- **2층 시도**: 사용자 → Manager → 실행 = Manager가 너무 많은 일 담당, 전문성 부족
-- **4층 시도**: 너무 복잡해서 실용성 떨어짐, 속도 느림
+MIT License - see [LICENSE](LICENSE) file for details
 
-**3층이 최적인 이유:**
-- **PM (Meta)**: 큰 그림 보고 상황 판단 (CEO 역할)
-- **Expert (Parent)**: 도메인 전문성으로 구체적 가이드 (팀장 역할)  
-- **Child (Execution)**: 가이드에 따라 정확한 실행 (실무자 역할)
+## Support
 
-**실제 회사 조직도와 동일한 구조 = 검증된 시스템**
-
-### **4-2. PM 역할을 "15년 경험 PM"으로 구체화한 이유**
-
-**초기 실패:**
-```
-PM 역할: "관리자"
-결과: AI가 애매하게 행동, 판단 기준 없음, 일관성 개판
-```
-
-**개선 후:**
-```
-PM 역할: "15년 경험의 프로젝트 매니저"
-구체적 역할: "대화 분석, 전문가 선택, 리소스 조정"
-결과: 명확한 판단 기준, 일관된 의사결정
-```
-
-**비유:** 
-- "연기해" (애매함) vs "40대 중반 이혼한 아버지로 연기해" (구체함)
-- 구체적일수록 AI가 더 정확하게 역할 수행
-
-### **4-3. 위험도 5단계 시스템의 과학적(?) 근거**
-
-**Level 5 (Very Low) - CSS 색깔 바꾸기:**
-- 실제 경험: AI가 색깔 바꾸는데 보안 검토부터 시작함 ㅂㄷㅂㄷ
-- 해결: 즉시 실행 (Silent Mode)
-
-**Level 1 (Critical) - 결제 시스템:**
-- 실제 경험: AI가 후딱 만들고 끝냄 → 보안 재앙
-- 해결: 무조건 상세 계획 후 승인 (Explicit Mode)
-
-**왜 5단계? 왜 홀수?**
-- 3단계: 너무 대충, 구분 부정확
-- 7단계: 너무 복잡, 실용성 떨어짐
-- 5단계: 적당히 세분화되면서 실용적
-- 홀수: 중간값 (Level 3) 존재 → 애매한 경우 처리 가능
-
-### **4-4. 동적 전문가 선택 시스템**
-
-**왜 미리 정해놓지 않고 실시간으로 선택?**
-
-**고정 방식의 한계:**
-```
-사용자: "쇼핑몰 만들어줘"
-시스템: "웹 개발자 투입"
-사용자: "아 그리고 결제도 있어야 해"
-시스템: "어? 결제 전문가도 필요한데... 처음부터 다시?"
-```
-
-**동적 방식의 장점:**
-```
-사용자: "쇼핑몰 만들어줘" 
-PM: "웹 개발자 투입"
-사용자: "결제도 있어야 해"
-PM: "알겠습니다. 결제 전문가 + 보안 전문가 추가 투입"
-```
-
-### **4-5. Silent Mode vs Explicit Mode 분리 이유**
-
-**실제 사용 패턴 분석:**
-
-**Silent Mode (Level 5, 4):**
-```
-사용자: "버튼 색깔 빨간색으로 바꿔줘"
-내 마음: "이거 간단한 거니까 빨리빨리 해줬으면..."
-```
-
-**Explicit Mode (Level 1, 2):**
-```
-사용자: "결제 시스템 만들어줘"  
-내 마음: "이거 큰 일이니까 계획 좀 들어보고 싶어..."
-```
-
-**인간의 자연스러운 기대치에 맞춤:**
-- 간단한 것: 빠르게
-- 복잡한 것: 신중하게
-
-### **4-6. 자연어 대화 학습 시스템**
-
-**기존 문제:**
-```
-나: "로그인 기능 만들어줘"
-나: "아 그리고 이건 보안 관련이니까 보안 전문가 관점에서"
-나: "UI도 예쁘게 만들어야 하니까 UX도 고려해줘"
-나: "모바일도 지원해야 하니까..."
-```
-
-**PCIP 해결:**
-```
-나: "로그인 기능 만들어줘. 보안이 걱정되는데 UI도 예뻐야 해"
-AI: *대화 흐름 분석* → Backend + Security + UX 전문가 자동 투입
-```
-
-**실제 팀장처럼:**
-- 팀장이 프로젝트 대화 듣고 적절한 팀원들 배치하는 것과 동일
-- 자연스러운 대화로 의도 파악
-
-### **4-7. External Knowledge Integration (외부 지식 통합)**
-
-**왜 이런 기능을 넣었나?**
-
-**실제 겪은 문제:**
-- 최신 Next.js 15 기능 물어봤는데 AI가 Next.js 13 기준으로 답변하는 경우
-- PCI DSS 규정 물어봤는데 부정확한 정보 제공
-- 특정 라이브러리 최신 API 관련해서 틀린 정보
-
-**해결책:**
-```
-AI의 3단계 신뢰도 체크:
-- High: 내 지식으로 충분 → 바로 답변
-- Medium: 외부 자료 참조해서 검증 → 검증된 답변  
-- Low: "전문 자료 찾아보겠습니다" → 정확한 정보 제공
-```
-
-**"모르면 찾아봐" 시스템:**
-- 틀린 정보보다는 "잠시만요, 확인해보겠습니다"가 훨씬 나음
-- 최신 정보, 정확한 규정 확인 가능
-
-### **4-8. 템플릿 시스템의 필요성**
-
-**템플릿 없을 때 문제:**
-```
-같은 질문해도:
-- 어떨 때는 코드만 던져줌
-- 어떨 때는 설명만 길게
-- 어떨 때는 형식이 완전 다름
-→ 예측 불가능, 일관성 없음
-```
-
-**템플릿 적용 후:**
-```
-Silent Mode: 항상 [분석] → [실행] → [간단 설명] 순서
-Explicit Mode: 항상 [상세 분석] → [계획] → [승인 요청] → [실행] 순서
-```
-
-**실제 회사 업무와 동일:**
-- 보고서 템플릿, 회의록 템플릿 있는 이유
-- 형식 통일하면 내용에 집중 가능
-- 품질 일관성 확보
-
-### **4-9. 3중 품질 검증 시스템**
-
-**검증 시스템 없을 때:**
-```
-AI가 코드 만들어줌 → 나는 그냥 믿고 씀 → 나중에 문제 발견
-"아 왜 이렇게 만들었지?" → 다시 수정 → 시간 낭비
-```
-
-**3중 검증 시스템:**
-```
-1. Child: 문법적 정확성, 기본 동작 확인
-2. Parent: 도메인별 품질 기준 (보안, 성능, UX 등)
-3. PM: 전체 프로젝트 일관성, 아키텍처 맞는지 확인
-```
-
-**실제 효과:**
-- 문제 사전 발견 및 수정
-- 최종 결과물 신뢰도 대폭 향상
-- "이거 믿고 써도 되나?" 불안감 해소
+- **Issues**: Report bugs and feature requests via GitHub Issues
+- **Discussions**: Share experiences and ask questions in GitHub Discussions
+- **Documentation**: Check [SystemPrompt.md](SystemPrompt.md) for detailed implementation
 
 ---
 
-## **📊 Part 5: Before & After 비교 (냉정한 평가)**
-
-### **개발 프로세스 비교**
-
-**Before (기존 AI):**
-```
-요청 → 빠른 구현 → 문제 발견 → 수정 → 또 문제 → 또 수정 → ...
-1시간 작업이 결국 1주일로 늘어남
-```
-
-**After (PCIP):**
-```
-요청 → 분석 → 계획 → 한 번에 제대로 구현 → 완료
-처음엔 좀 느리지만 전체적으로 훨씬 빠름
-```
-
-### **실제 사용 후기**
-
-**장점:**
-- ✅ 매번 세세한 설명 안 해도 됨
-- ✅ 전문가 관점이 자동으로 적용됨
-- ✅ 코드 품질이 확실히 좋아짐
-- ✅ 나중에 문제 생길 일이 거의 없음
-- ✅ 프로젝트 일관성 유지됨
-
-**단점:**
-- ❌ 간단한 작업도 약간 느려짐 (그래도 Silent Mode로 최소화)
-- ❌ 프롬프트가 길어서 처음엔 복잡해 보임
-- ❌ 모든 상황에 완벽하지는 않음 (여전히 AI니까)
-
----
-
-## **🎯 Part 6: 실제 적용 가이드**
-
-### **추천 대상:**
-- 복잡한 프로젝트 하는 개발자
-- 코드 품질 신경쓰는 사람  
-- AI한테 매번 세세한 설명하기 귀찮은 사람
-- 장기적으로 유지보수 해야 하는 프로젝트
-
-### **비추천 대상:**
-- "Hello World" 수준만 만드는 사람
-- 일회용 프로토타입만 필요한 사람
-- 빠른 테스트만 하고 버릴 코드
-
-### **실사용 팁:**
-1. **처음엔 간단한 작업부터** → Silent Mode 체험
-2. **복잡한 작업으로 점진적 확대** → Explicit Mode 체험  
-3. **자연스럽게 대화하기** → "보안이 걱정돼", "성능이 중요해" 등
-4. **결과물 검토하기** → AI도 완벽하지 않으니 최종 확인은 필수
-
----
-
-## **💡 결론: 전체 설계 철학**
-
-**"AI를 단순 도구가 아닌 숙련된 팀원으로 만들자"**
-
-- **오은영 박사 육아법**: 상황 파악 → 맥락 이해 → 가이드 제공
-- **실제 개발팀 조직**: PM → 팀장 → 실무자 구조
-- **내 삽질 경험**: 뭘 고려해야 하는지 뼈저리게 체험
-- **인간 친화적 설계**: 자연스러운 대화, 예측 가능한 결과
-
-**= PCIP Framework 탄생**
-
----
-
-**P.S.** 
-- 오은영 박사님 덕분에 개발 라이프가 편해졌습니다 ㅋㅋㅋ
-- 혹시 비슷한 경험 있는 개발자들 있으면 의견 남겨주십샤 ㄱㄱ
-- 실제로 써보고 피드백 주시면 감사하겠습니다!
-
-## 사용법 ##
-
-[SystemPrompt.md](/SystemPrompt.md) 프롬프트를 시스템 프롬프트(인스트럭션)으로 적용하고 코딩하면 됨.
-
-Cursor에서는 User Rules 또는 Project Rules, 영 말귀를 못알아 먹는다고 느껴지면 프롬프트에 시스템 프롬프트로 사용하라고 직접 붙여넣어 지시하면 됨.
-
-물론, 내가 cursor 써서 예시도 Cursor.
+*Transforming AI coding assistants from simple tools into skilled development team members*
