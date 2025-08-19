@@ -8,7 +8,7 @@
 **AI 코딩 어시스턴트를 위한 Parent-Child Instruction Processing 프레임워크**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-2.1-blue.svg)]()
 
 ## 개요
 
@@ -292,6 +292,11 @@ Child는 가드레일 내에서 실행하며 품질과 안전을 유지한 채 S
 
 ---
 
+## 변경 로그
+
+- 2.1: `SystemPrompt.md`/`SystemPromptEN.md` 업데이트(지시문 명확화, 용어 통일, 모드 전환 기준 정교화). README 버전 배지 갱신.
+- 2.0: 다국어 README 정리, 위험도/모드 표준화, 품질 보증 체계 명시.
+
 ## 설치 및 설정
 
 ### 사전 준비물
@@ -393,7 +398,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 **Parent-Child Instruction Processing Framework for AI Coding Assistants**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-2.1-blue.svg)]()
 
 ### Overview
 
@@ -513,6 +518,11 @@ Benefits: Reduced explanation overhead, expert perspectives, higher quality, few
 Limitations: Initial complexity for simple tasks (mitigated by Silent Mode), small learning curve, inherent AI constraints.
 
 ---
+
+## Changelog
+
+- 2.1: Updated `SystemPrompt.md`/`SystemPromptEN.md` (clearer instructions, terminology consistency, refined mode switching criteria). Updated README version badge.
+- 2.0: Organized bilingual README, standardized risk/mode tables, documented QA workflow.
 
 ### Installation & Setup
 
